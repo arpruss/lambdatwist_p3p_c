@@ -122,7 +122,7 @@ static void invert3(Matrix33 M, double a00, double a01, double a02,
         M[i][j] *= idet;
 }
 
-static inline double max(double a,double b) {
+static inline double dmax(double a,double b) {
     return a<b ? b : a;
 }
 
@@ -436,7 +436,7 @@ int p3p_lambdatwist(Vector2 _y1, Vector2 _y2, Vector2 _y3, Vector3 x1, Vector3 x
     Vector3 L;
     eigwithknown330(A,V,L);
 
-    double v=sqrt(max(0,-L[1]/L[0]));
+    double v=sqrt(dmax(0,-L[1]/L[0]));
 
     int valid=0;
     Vector3 Ls[4];    
