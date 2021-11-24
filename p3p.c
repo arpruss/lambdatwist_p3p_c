@@ -190,11 +190,6 @@ static void apply3(Vector3 out, Matrix33 m, Vector3 a) {
         out[i] = m[i][0]*a[0]+m[i][1]*a[1]+m[i][2]*a[2];
 }
 
-static void apply3T(Vector3 out, Matrix33 m, Vector3 a) {
-    for (int i=0;i<3;i++)
-        out[i] = m[0][i]*a[0]+m[1][i]*a[1]+m[2][i]*a[2];
-}
-
 /**
  * @brief refineL
  * @param L
@@ -260,7 +255,7 @@ static void gauss_newton_refineL(Vector3 L,
             Vector3 z;
             apply3(z,Ji,r);
             scale3(z,det,z);
-            sub3(L,L,z);
+            sub3(L1,L,z);
             //L=Vector3<T>(L) - det*(Ji*r);
             //%l=l - g*H\G;%inv(H)*G
             //L=L - g*J\r; //% works because the size is ok!
