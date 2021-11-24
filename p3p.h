@@ -25,13 +25,8 @@ typedef double Matrix33[3][3];
 
 int p3p_lambdatwist(Vector2 cam1, Vector2 cam2, Vector2 cam3, Vector3 x1, Vector3 x2, Vector3 x3,
         Matrix33* Rs, Vector3* Ts, int refinement_iterations);
-        
-void toCam(Vector2 out, Vector3 in,Matrix33 R,Vector3 T) {
-    Vector3 temp;
-    apply3(temp, R, in);
-    add3(temp, T, temp);
-    out[0] = temp[0]/temp[2];
-    out[1] = temp[1]/temp[2];
-}
+void applyRT(Vector2 out, Vector3 in,Matrix33 R,Vector3 T);
+void toHomography(double* h, Matrix33 R, Vector3 T) {
+void applyHomography(Vector2 out, double* h, Vector2 in);
 
 #endif // _P3P_H       

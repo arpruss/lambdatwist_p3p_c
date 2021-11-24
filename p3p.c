@@ -137,12 +137,13 @@ static inline void normalize3(Vector3 out,Vector3 in) {
     out[2] = in[2] * n;
 }
 
-static inline void homogenize(Vector3 out, Vector3 in) {
+static inline void homogenize23(Vector3 out,Vector2 in) {
     double n = 1/sqrt(in[0]*in[0]+in[1]*in[1]+1);
     out[0] = in[0] * n;
     out[1] = in[1] * n;
     out[2] = n;
 }
+
 
 static inline void set3(Vector3 out,double x0,double x1,double x2) {
     out[0] = x0;
@@ -187,6 +188,11 @@ static void mult33(Matrix33 m, Matrix33 a, Matrix33 b) {
 static void apply3(Vector3 out, Matrix33 m, Vector3 a) {
     for (int i=0;i<3;i++)
         out[i] = m[i][0]*a[0]+m[i][1]*a[1]+m[i][2]*a[2];
+}
+
+static void apply3T(Vector3 out, Matrix33 m, Vector3 a) {
+    for (int i=0;i<3;i++)
+        out[i] = m[0][i]*a[0]+m[1][i]*a[1]+m[2][i]*a[2];
 }
 
 /**
@@ -349,14 +355,14 @@ static void eigwithknown330(Matrix33 x, Matrix33 E, Vector3 L) {
     }
 }
 
-int p3p_lambdatwist(Vector2 cam1, Vector2 cam2, Vector2 cam3, Vector3 x1, Vector3 x2, Vector3 x3,
+int p3p_lambdatwist(Vector2 _y1, Vector2 _y2, Vector2 _y3, Vector3 x1, Vector3 x2, Vector3 x3,
         Matrix33* Rs, Vector3* Ts, int refinement_iterations) {
             
     Vector3 y1,y2,y3;
-
-    homogenize(y1,cam1);
-    homogenize(y2,cam2);
-    homogenize(y3,cam3);
+    
+    homogenize23(y1,_y1);
+    homogenize23(y2,_y2);
+    homogenize23(y3,_y3);
     
     double b12=-2*dot3(y1,y2);
     double b13=-2*dot3(y1,y3);
@@ -577,41 +583,77 @@ int p3p_lambdatwist(Vector2 cam1, Vector2 cam2, Vector2 cam3, Vector3 x1, Vector
     return valid;
 }
 
-void toCam(Vector2 out, Vector3 in,Matrix33 R,Vector3 T) {
+void applyRT(Vector2 out, Matrix33 R, Vector3 T, Vector3 in) {
     Vector3 temp;
     apply3(temp, R, in);
     add3(temp, T, temp);
     out[0] = temp[0]/temp[2];
-    out[1] = temp[1]/temp[2];
+    out[1] = temp[1]/temp[2];    
+}
+
+void toHomography(double* h, Matrix33 R, Vector3 T) {
+    h[0] = R[0][0]/T[2];
+    h[1] = R[0][1]/T[2];
+    h[2] = T[0]/T[2];
+    h[3] = R[1][0]/T[2];
+    h[4] = R[1][1]/T[2];
+    h[5] = T[1]/T[2];
+    h[6] = R[2][0]/T[2];
+    h[7] = R[2][1]/T[2];
+}
+
+void applyHomography(Vector2 out, double* h, Vector2 in) {
+    double scale = 1/(in[0]*h[6]+in[1]*h[7]+1);
+    
+    out[0] = (h[0]*in[0]+h[1]*in[1]+h[2])*scale;
+    out[1] = (h[3]*in[0]+h[4]*in[1]+h[5])*scale;
 }
 
 #ifdef TEST
 #include <stdio.h>
 
-void showVect2(Vector3 v) {
-    printf("%lg %lg\n", v[0],v[1],v[2]);
+void showVect2(Vector2 v) {
+    printf("%lg %lg\n", v[0],v[1]);
+}
+
+void showVect3(Vector3 v) {
+    printf("%lg %lg %lg\n", v[0],v[1],v[2]);
 }
 
 void main() {
-    Vector2 cam1 = { 0, 0 };
-    Vector2 cam2 = { 0, 10 };
-    Vector2 cam3 = { 10, 0 };
-    Vector3 x1 = { 0, 0, 3 };
-    Vector3 x2 = { 0, 20, 4 };
-    Vector3 x3 = { 10, 0, 5 };
+    Vector2 y1 = { 0, 0 };
+    Vector2 y2 = { 0, 7 };
+    Vector2 y3 = { 10, 0 };
+    Vector3 x1 = { 0, 0, 0 };
+    Vector3 x2 = { 0, 20, 0 };
+    Vector3 x3 = { 20, 0, 0 };
     Matrix33 Rs[4];
     Vector3 Ts[4];
 
-    int valid = p3p_lambdatwist(cam1,cam2,cam3,x1,x2,x3,Rs,Ts,5);
+    int valid = p3p_lambdatwist(y1,y2,y3,x1,x2,x3,Rs,Ts,5);
     if (valid) {
         for (int i=0; i<valid; i++) {
             printf("test %d \n",i);
+            showVect3(Ts[i]);
+            for (int j=0; j<3; j++)
+                showVect3(Rs[i][j]);
             Vector2 out;
-            toCam(out, x1, Rs[i], Ts[i]);
+            double h[8];
+            toHomography(h, Rs[i], Ts[i]);
+            printf("x1->y1 ");
+            applyRT(out, Rs[i], Ts[i], x1);
             showVect2(out);
-            toCam(out, x2, Rs[i], Ts[i]);
+            applyHomography(out, h, x1);
             showVect2(out);
-            toCam(out, x3, Rs[i], Ts[i]);
+            printf("x2->y2 ");
+            applyRT(out, Rs[i], Ts[i], x2);
+            showVect2(out);
+            applyHomography(out, h, x2);
+            showVect2(out);
+            printf("x3->y3 ");
+            applyRT(out, Rs[i], Ts[i], x3);
+            showVect2(out);
+            applyHomography(out, h, x3);
             showVect2(out);
         }
     }
