@@ -12,7 +12,7 @@ type_pvec3 = ctypes.POINTER(type_vec3)
 type_mat33 = ((ctypes.c_double * 3) * 3)
 
 p3pclib.p3p_lambdatwist.restype = ctypes.c_int
-p3pclib.p3p_lambdatwist.argtypes = [type_vec2, type_vec2, type_vec2, type_vec3, type_vec3, type_vec3, type_mat33*4, type_vec3*3, ctypes.c_int]
+p3pclib.p3p_lambdatwist.argtypes = [type_vec2, type_vec2, type_vec2, type_vec3, type_vec3, type_vec3, type_mat33*4, type_vec3*4, ctypes.c_int]
 
 p3pclib.toHomography.argtypes = [ctypes.POINTER(ctypes.c_double * 8),
     ctypes.POINTER(type_mat33), type_pvec3]
