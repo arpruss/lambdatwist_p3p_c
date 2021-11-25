@@ -44,7 +44,6 @@ def homographies(y1,y2,y3,x1,x2,x3,iterations=5):
         out.append(toHomography(Rs[i], Ts[i]))
     return out
 
-
 def applyRT(R,T,v):
     _v = (type_vec3)(*v) if len(v)>=3 else (type_vec3)(v[0],v[1],0)
     out = (type_vec2)()
