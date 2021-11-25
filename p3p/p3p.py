@@ -21,7 +21,7 @@ p3pclib.applyHomography.argtypes = [type_vec2, ctypes.c_double * 8, type_vec2]
 
 def lambdatwist(y1, y2, y3, x1, x2, x3, iterations=5):
     Rs = (type_mat33 * 4)()
-    Ts = (type_vec3 * 3)()
+    Ts = (type_vec3 * 4)()
     _x1 = (type_vec3)(*x1) if len(x1)>=3 else (type_vec3)(x1[0],x1[1],0)
     _x2 = (type_vec3)(*x2) if len(x1)>=3 else (type_vec3)(x2[0],x2[1],0)
     _x3 = (type_vec3)(*x3) if len(x1)>=3 else (type_vec3)(x3[0],x3[1],0)

@@ -22,7 +22,7 @@ class build_ext(build_ext_orig):
 
 setup(
     name="p3p",
-    version="1.0.2",
+    version="1.0.3",
     py_modules = ["p3p.p3p"],
     ext_modules=[ CTypesExtension( "p3p.p3plib", ["c/p3p.c"],),],
     cmdclass={'build_ext': build_ext},
