@@ -1,6 +1,7 @@
 import ctypes
 import numpy
 import pathlib
+import math
 
 libfile = pathlib.Path(__file__).parent / "p3plib.so"
 p3pclib = ctypes.CDLL(str(libfile))
@@ -19,6 +20,8 @@ p3pclib.toHomography.argtypes = [ctypes.POINTER(ctypes.c_double * 8),
 
 p3pclib.applyHomography.argtypes = [type_vec2, ctypes.c_double * 8, type_vec2]
 
+p3pclib.applyRT.argtypes = [type_vec2, type_mat33, type_vec3, type_vec3]
+
 def lambdatwist(y1, y2, y3, x1, x2, x3, iterations=5):
     Rs = (type_mat33 * 4)()
     Ts = (type_vec3 * 4)()
@@ -29,14 +32,40 @@ def lambdatwist(y1, y2, y3, x1, x2, x3, iterations=5):
         _x1,_x2,_x3,Rs,Ts,iterations)
     return Rs[:valid],Ts[:valid]
     
+def toHomography(R,T):
+    h = (ctypes.c_double * 8)()
+    p3pclib.toHomography(h, R, T)
+    return h
+
 def homographies(y1,y2,y3,x1,x2,x3,iterations=5):
     Rs,Ts = lambdatwist(y1,y2,y3,x1,x2,x3,iterations=iterations)
     out = []
     for i in range(len(Rs)):
-        h = (ctypes.c_double * 8)()
-        p3pclib.toHomography(h, Rs[i], Ts[i])
-        out.append(h)
+        out.append(toHomography(Rs[i], Ts[i]))
     return out
+
+
+def applyRT(R,T,v):
+    _v = (type_vec3)(*v) if len(v)>=3 else (type_vec3)(v[0],v[1],0)
+    out = (type_vec2)()
+    p3pclib.applyRT(out, R, T, _v)
+    return out
+
+def p4p(dest,source,iterations=5):
+    Rs,Ts = lambdatwist(*dest[:3],*source[:3],iterations=iterations)
+    if len(Rs) == 0:
+        return None,None
+    bestI = -1
+    bestD = float("inf")
+    for i in range(len(Rs)):
+        out = applyRT(Rs[i],Ts[i],source[3])
+        d = math.hypot(out[0]-dest[3][0],out[1]-dest[3][1])
+        if d < bestD:
+            bestI = i
+            bestD = d
+    if bestI is None:
+        return None,None
+    return Rs[bestI],Ts[bestI]
     
 def applyHomography(h,x):
     _x = (type_vec2)(*x[:2])
