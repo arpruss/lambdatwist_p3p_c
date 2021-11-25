@@ -660,3 +660,5 @@ void main() {
     }
 }
 #endif
+
+void PyInit_p3p(void);
