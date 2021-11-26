@@ -31,10 +31,10 @@ typedef double Matrix33[3][3];
 #define NUMERIC_LIMIT 1e-13
 #define KLAS_P3P_CUBIC_SOLVER_ITER 50
 
-static int root2double(double b, double c,double* r1p, double* r2p){
+static int root2real(double b, double c,double* r1p, double* r2p){
     double v=b*b -4*c;
     if(v<0){
-        *r1p=*r2p=0.5*b;
+        *r1p=*r2p=-0.5*b;
         return 0;
     }
 
@@ -295,10 +295,10 @@ static void eigwithknown330(Matrix33 x, Matrix33 E, Vector3 L) {
     set3(v3, x[1][0]*x[2][1]- x[2][0]*x[1][1],
                    x[2][0]*x[0][1]- x[2][1]*x[0][0],
                    x[1][1]*x[0][0]- x[1][0]*x[0][1]);
-    double length = sqrt(normSquared3(v3));
-    v3[0] /= length;
-    v3[1] /= length;
-    v3[2] /= length;
+    double n = 1/sqrt(normSquared3(v3));
+    v3[0] *= n;
+    v3[1] *= n;
+    v3[2] *= n;
 
     double x01_squared=x[0][1]*x[0][1];
     // get the two other...
@@ -307,7 +307,7 @@ static void eigwithknown330(Matrix33 x, Matrix33 E, Vector3 L) {
             x[0][0]*(x[1][1] + x[2][2]) + x[1][1]*x[2][2];
     double e1,e2;
     //roots(poly(x))
-    root2double(b,c,&e1,&e2);
+    root2real(b,c,&e1,&e2);
 
     if(fabs(e1)<fabs(e2)) {
         double t = e1;
@@ -443,104 +443,82 @@ LIBRARY_API int p3p_lambdatwist(Vector2 _y1, Vector2 _y2, Vector2 _y3, Vector3 x
     eigwithknown330(A,V,L);
 
     double v=sqrt(dmax(0,-L[1]/L[0]));
+    printf("v=%lg\n",v);
 
     int valid=0;
     Vector3 Ls[4];    
 
     // use the t=Vl with t2,st2,t3 and solve for t3 in t2
-    { //+v
+    
+    for(int i=-1; i<=1; i+=2)
+    {
+        double s = i*v;
 
-        double s=v;
-        double w2=1/(s*V[0][1] - V[0][0]);
-        double w0=(V[1][0] - s*V[1][1])*w2;
-        double w1=(V[2][0] - s*V[2][1])*w2;
+        // u = V(:, 1) - sV(:,2)
 
-        double a=1/((a13 - a12)*w1*w1 - a12*b13*w1 - a12);
-        double b=(a13*b12*w1 - a12*b13*w0 - 2*w0*w1*(a12 - a13))*a;
-        double c=((a13 - a12)*w0*w0 + a13*b12*w0 + a13)*a;
+        double u1=V[0][0] - s*V[0][1];
+        double u2=V[1][0] - s*V[1][1];
+        double u3=V[2][0] - s*V[2][1];
 
-        if (b*b-4*c>=0) {
-            double tau1,tau2;
-            root2double(b,c,&tau1,&tau2);
-            if (tau1>0){
-                double tau=tau1;
-                double d=a23/(tau*(b23 + tau) + 1);
+        // we are computing lambda using a linear relation
+        // u1*l1 + u2*l2 + u3*l3=0
+        // li>0, implies all three ui=0 is degenerate...
+        // if two are zero the third must be
+        // hence at most one can be zero.
+        // divide by the largest for best numerics,
+        // simple version, use the bigger of u1, u2, one will always be non-zero
+        if(fabs(u1)<fabs(u2))
+        {
+            // solve for l2
+            double a= (a23 - a12)*u3*u3 - a12*u2*u2 + a12*b23*u2*u3;
+            double b= (2*a23*u1*u3 - 2*a12*u1*u3 + a12*b23*u1*u2 - a23*b12*u2*u3)/a;
+            double c= (a23*u1*u1 - a12*u1*u1 + a23*u2*u2 - a23*b12*u1*u2)/a;
 
-                double l2=sqrt(d);
-                double l3=tau*l2;
-
-                double l1=w0*l2 +w1*l3;
-                if(l1>=0){
-
-                    set3(Ls[valid],l1,l2,l3);
-
-                    ++valid;
-                }
-
-            }
-            if(tau2>0){
-                double tau=tau2;
-                double d=a23/(tau*(b23 + tau) + 1);
-
-                double l2=sqrt(d);
-                double l3=tau*l2;
-                double l1=w0*l2 +w1*l3;
-                if(l1>=0){
-                    set3(Ls[valid],l1,l2,l3);
-                    ++valid;
-                }
-
+            Vector2 taus;
+            if(!root2real(b,c,&taus[0],&taus[1])) continue;
+            for(int j=0;j<2;j++)
+            {
+                double tau =taus[j];
+                if(tau<=0) continue;
+                //(tau^2 + b13*tau + 1)*l1^2 = a13
+                //positive only
+                double l1=sqrt(a13/(tau*(tau + b13) + 1.0));
+                double l3=tau*l1;
+                double l2=-(u1*l1 + u3*l3)/u2;
+                if(l2<=0) continue;
+                set3(Ls[valid],l1,l2,l3);
+                ++valid;
             }
         }
-    }
-
-    { //+v
-        double s=-v;
-        double w2=1/(s*V[0][1] - V[0][0]);
-        double w0=(V[1][0] - s*V[1][1])*w2;
-        double w1=(V[2][0] - s*V[2][1])*w2;
-
-        double a=1/((a13 - a12)*w1*w1 - a12*b13*w1 - a12);
-        double b=(a13*b12*w1 - a12*b13*w0 - 2*w0*w1*(a12 - a13))*a;
-        double c=((a13 - a12)*w0*w0 + a13*b12*w0 + a13)*a;
+        else
+        { // solve for l1
 
 
-        if(b*b-4*c>=0) {
-            double tau1,tau2;
+            double w2=1/( -u1);
+            double w0=u2*w2;
+            double w1=u3*w2;
 
-            root2double(b,c,&tau1,&tau2);
-            if (tau1>0) {
-                double tau=tau1;
+            double a=1/((a13 - a12)*w1*w1 - a12*b13*w1 - a12);
+            double b=(a13*b12*w1 - a12*b13*w0 - 2*w0*w1*(a12 - a13))*a;
+            double c=((a13 - a12)*w0*w0 + a13*b12*w0 + a13)*a;
+
+            Vector2 taus;
+            if(!root2real(b,c,&taus[0],&taus[1])) continue;
+            for(int j=0;j<2;j++)
+            {
+                double tau =taus[j];
+                if(tau<=0) continue;
                 double d=a23/(tau*(b23 + tau) + 1);
-                if(d>0){
-                  double l2=sqrt(d);
+                double l2=sqrt(d);
+                double l3=tau*l2;
+                double l1=w0*l2 +w1*l3;
+                if(l1<=0) continue;
 
-                  double l3=tau*l2;
-
-                  double l1=w0*l2 + w1*l3;
-                  if(l1>=0){
-                      set3(Ls[valid],l1,l2,l3);
-                      ++valid;
-                  }
-                }
-            }
-            if(tau2>0){
-                double tau=tau2;
-                double d=a23/(tau*(b23 + tau) + 1);
-                if(d>0){
-                  double l2=sqrt(d);
-
-                  double l3=tau*l2;
-
-                  double l1=w0*l2 +w1*l3;
-                  if(l1>=0){
-                      set3(Ls[valid],l1,l2,l3);
-                      ++valid;
-                  }
-                }
+                set3(Ls[valid],l1,l2,l3);
+                ++valid;
             }
         }
-    }
+    }    
 
     for(int i=0;i<valid;++i) {              
         gauss_newton_refineL(Ls[i],a12,a13,a23,b12,b13,b23,
@@ -623,11 +601,12 @@ void showVect3(Vector3 v) {
 
 void main() {
     Vector2 y1 = { 0, 0 };
-    Vector2 y2 = { 0, 7 };
-    Vector2 y3 = { 10, 0 };
+    Vector2 y2 = { 2, 0 };
+    Vector2 y3 = { 0, 2 };
     Vector3 x1 = { 0, 0, 0 };
-    Vector3 x2 = { 0, 20, 0 };
-    Vector3 x3 = { 20, 0, 0 };
+    Vector3 x2 = { 1, 0, 0 };
+    Vector3 x3 = { 0, 1, 0 };
+    Vector3 x4 = { 1, 1, 0 };
     Matrix33 Rs[4];
     Vector3 Ts[4];
 
@@ -638,27 +617,17 @@ void main() {
             showVect3(Ts[i]);
             for (int j=0; j<3; j++)
                 showVect3(Rs[i][j]);
-            Vector2 out;
-            double h[8];
-            toHomography(h, Rs[i], Ts[i]);
-            printf("x1->y1 ");
-            applyRT(out, Rs[i], Ts[i], x1);
+            Vector2 out;    
+            applyRT(out, Rs[i], Ts[i], x4);
             showVect2(out);
-            applyHomography(out, h, x1);
-            showVect2(out);
-            printf("x2->y2 ");
-            applyRT(out, Rs[i], Ts[i], x2);
-            showVect2(out);
-            applyHomography(out, h, x2);
-            showVect2(out);
-            printf("x3->y3 ");
             applyRT(out, Rs[i], Ts[i], x3);
             showVect2(out);
-            applyHomography(out, h, x3);
+            applyRT(out, Rs[i], Ts[i], x2);
+            showVect2(out);
+            applyRT(out, Rs[i], Ts[i], x1);
             showVect2(out);
         }
     }
 }
 #endif
 
-void PyInit_p3p(void);
