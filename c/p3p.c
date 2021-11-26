@@ -443,7 +443,6 @@ LIBRARY_API int p3p_lambdatwist(Vector2 _y1, Vector2 _y2, Vector2 _y3, Vector3 x
     eigwithknown330(A,V,L);
 
     double v=sqrt(dmax(0,-L[1]/L[0]));
-    printf("v=%lg\n",v);
 
     int valid=0;
     Vector3 Ls[4];    
