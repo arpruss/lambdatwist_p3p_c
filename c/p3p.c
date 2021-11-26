@@ -599,32 +599,41 @@ void showVect3(Vector3 v) {
 }
 
 void main() {
-    Vector2 y1 = { 0, 0 };
-    Vector2 y2 = { 2, 0 };
-    Vector2 y3 = { 0, 2 };
-    Vector3 x1 = { 0, 0, 0 };
-    Vector3 x2 = { 1, 0, 0 };
-    Vector3 x3 = { 0, 1, 0 };
-    Vector3 x4 = { 1, 1, 0 };
+ Vector3 x1 = {0.355263, -0.0518519, 0};
+ Vector3 x2 = {0.644737, -0.0518519, 0};
+ Vector3 x3 = {0.710526, 1.02963, 0};
+ Vector3 x4 = {0.289474, 1.02963, 0};
+
+ Vector2 y1 = {-0.06901041666666667, -0.3138020833333333};
+ Vector2 y2 = {0.11328125, -0.31640625};
+ Vector2 y3 = {0.15364583333333334, 0.07682291666666667};
+ Vector2 y4 = {-0.11197916666666667, 0.0703125};
     Matrix33 Rs[4];
     Vector3 Ts[4];
 
     int valid = p3p_lambdatwist(y1,y2,y3,x1,x2,x3,Rs,Ts,5);
     if (valid) {
         for (int i=0; i<valid; i++) {
-            printf("test %d \n",i);
+            printf("solution %d \nT: ",i);
             showVect3(Ts[i]);
             for (int j=0; j<3; j++)
                 showVect3(Rs[i][j]);
             Vector2 out;    
-            applyRT(out, Rs[i], Ts[i], x4);
-            showVect2(out);
-            applyRT(out, Rs[i], Ts[i], x3);
-            showVect2(out);
-            applyRT(out, Rs[i], Ts[i], x2);
-            showVect2(out);
             applyRT(out, Rs[i], Ts[i], x1);
-            showVect2(out);
+            printf("out "); showVect2(out);
+            printf("truth "); showVect2(y1);
+            
+            applyRT(out, Rs[i], Ts[i], x2);
+            printf("out "); showVect2(out);
+            printf("truth "); showVect2(y2);
+
+            applyRT(out, Rs[i], Ts[i], x3);
+            printf("out "); showVect2(out);
+            printf("truth "); showVect2(y3);
+            
+            applyRT(out, Rs[i], Ts[i], x4);
+            printf("out "); showVect2(out);
+            printf("truth "); showVect2(y4);
         }
     }
 }
